@@ -37,9 +37,9 @@ def mapping_funtion(sensor_value):
 
 async def braitenberg_machine(robot: cozmo.robot.Robot):
 	'''The core of the braitenberg machine program'''
-	# Move lift down and tilt the head up
-	robot.move_lift(-3)
-	robot.set_head_angle(cozmo.robot.MAX_HEAD_ANGLE).wait_for_completed()
+	# Move lift up and tilt the head down
+	robot.move_lift(3)
+	robot.set_head_angle(cozmo.util.Angle(degrees=-20)).wait_for_completed()
 	print("Press CTRL-C to quit")
 
 	while True:
@@ -52,11 +52,11 @@ async def braitenberg_machine(robot: cozmo.robot.Robot):
 		# Determine the w/h of the new image
 		h = opencv_image.shape[0]
 		w = opencv_image.shape[1]
-		sensor_n_columns = 20
+		sensor_n_columns = 100
 
 		# Sense the current brightness values on the right and left of the image.
-		sensor_right = sense_brightness(opencv_image, columns=np.arange(sensor_n_columns))
-		sensor_left = sense_brightness(opencv_image, columns=np.arange(w-sensor_n_columns, w))
+		sensor_left = sense_brightness(opencv_image, columns=np.arange(sensor_n_columns))
+		sensor_right = sense_brightness(opencv_image, columns=np.arange(w-sensor_n_columns, w))
 
 		print("sensor_right: " + str(sensor_right))
 		print("sensor_left: " + str(sensor_left))
@@ -70,7 +70,7 @@ async def braitenberg_machine(robot: cozmo.robot.Robot):
 		print("motor_left: " + str(motor_left))
 
 		# Send commands to the robot
-		await robot.drive_wheels(motor_right, motor_left)
+		await robot.drive_wheels(motor_left, motor_right)
 
 		time.sleep(.1)
 
