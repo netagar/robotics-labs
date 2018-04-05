@@ -23,11 +23,33 @@ def find_ball(opencv_image, debug=False):
 		Returns [x, y, radius] of the ball, and [0,0,0] or None if no ball is found.
 	"""
 
-	ball = None
+	param1 = 80
+	if debug:
+		edges = cv2.Canny(opencv_image, param1, param1/2)
+		pil_image = Image.fromarray(edges)
+		pil_image.show() 
+
+	circles = cv2.HoughCircles(opencv_image, cv2.HOUGH_GRADIENT, 
+		dp=2, minDist=30,
+		param1=param1, param2=50,
+		minRadius=10, maxRadius=100)
 	
-	## TODO: INSERT YOUR SOLUTION HERE
-	
-	return ball
+	if circles is None:
+		return [0, 0, 0]
+
+	# Reduce the dimensionality
+	circles = circles[0,:]
+
+	print(len(circles))
+	if debug:
+		#print(circles)
+		display_circles(opencv_image, circles)
+		input("Press Enter to continue...")
+
+	if len(circles) > 0:
+		return circles[0]
+	else:
+		return [0, 0, 0]
 
 
 def display_circles(opencv_image, circles, best=None):
