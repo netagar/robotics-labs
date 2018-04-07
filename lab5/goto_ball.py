@@ -59,6 +59,7 @@ async def run(robot: cozmo.robot.Robot):
 
 
     try:
+        looking_around = None
 
         while True:
             #get camera image
@@ -66,6 +67,7 @@ async def run(robot: cozmo.robot.Robot):
 
             #convert camera image to opencv format
             opencv_image = cv2.cvtColor(np.asarray(event.image), cv2.COLOR_RGB2GRAY)
+            w = opencv_image.shape[1]
 
             #find the ball
             ball = find_ball.find_ball(opencv_image)
@@ -73,7 +75,17 @@ async def run(robot: cozmo.robot.Robot):
             #set annotator ball
             BallAnnotator.ball = ball
 
-            ## TODO: ENTER YOUR SOLUTION HERE
+            if np.array_equal(ball, [0, 0, 0]):
+                looking_around = robot.start_behavior(cozmo.behavior.BehaviorTypes.LookAroundInPlace)
+            else:
+                # Stop moving around
+                if looking_around:
+                    looking_around.stop()
+                    looking_around = None
+                # Drive towards the ball like a Braitenberg vehicle.
+                # Larger radius -> slower
+                # Ball on the left -> right wheel faster
+                
 
 
     except KeyboardInterrupt:
