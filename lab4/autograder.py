@@ -42,5 +42,7 @@ for filedata in grid_data:
 	print("circle radius err =", r_err, "pixel")
 	if center_err <= center_err_thresh and r_err <= radius_err_thresh:
 		score += 1;
+	else:
+		find_ball.find_ball(opencv_image, debug=True)
  
 print("score =", score)

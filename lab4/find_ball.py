@@ -23,15 +23,19 @@ def find_ball(opencv_image, debug=False):
 		Returns [x, y, radius] of the ball, and [0,0,0] or None if no ball is found.
 	"""
 
-	param1 = 80
+	edge_threshold = 100
+	accumulator_threshold = 35
+
+	blurred = cv2.GaussianBlur(opencv_image, (9, 9), 2)
+
 	if debug:
-		edges = cv2.Canny(opencv_image, param1, param1/2)
+		edges = cv2.Canny(blurred, edge_threshold, edge_threshold/2)
 		pil_image = Image.fromarray(edges)
 		pil_image.show() 
 
-	circles = cv2.HoughCircles(opencv_image, cv2.HOUGH_GRADIENT, 
-		dp=2, minDist=30,
-		param1=param1, param2=50,
+	circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 
+		dp=1, minDist=30,
+		param1=edge_threshold, param2=accumulator_threshold,
 		minRadius=10, maxRadius=100)
 	
 	if circles is None:
@@ -43,7 +47,7 @@ def find_ball(opencv_image, debug=False):
 	print(len(circles))
 	if debug:
 		#print(circles)
-		display_circles(opencv_image, circles)
+		display_circles(blurred, circles)
 		input("Press Enter to continue...")
 
 	if len(circles) > 0:
