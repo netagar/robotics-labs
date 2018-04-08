@@ -44,7 +44,7 @@ def find_ball(opencv_image, debug=False):
 	# Reduce the dimensionality
 	circles = circles[0,:]
 
-	print(len(circles))
+	#print(len(circles))
 	if debug:
 		#print(circles)
 		display_circles(blurred, circles)

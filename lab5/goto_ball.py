@@ -84,8 +84,19 @@ async def run(robot: cozmo.robot.Robot):
                     looking_around = None
                 # Drive towards the ball like a Braitenberg vehicle.
                 # Larger radius -> slower
-                # Ball on the left -> right wheel faster
-                
+                speed = 300 / ball[2]
+
+                # Ball on the left -> diff = -0.5
+                # Ball on the right -> diff = 0.5
+                diff = ball[0] / w - 0.5
+
+                left_speed = speed * (1 + diff)
+                right_speed = speed * (1 - diff)
+
+                print("Radius = {0}, Speed = {1}, Diff = {2}, Left = {3}, Right = {4}".format(
+                    ball[2], speed, diff, left_speed, right_speed))
+                robot.drive_wheel_motors(left_speed, right_speed)
+
 
 
     except KeyboardInterrupt:
