@@ -60,6 +60,7 @@ async def run(robot: cozmo.robot.Robot):
 
     try:
         looking_around = None
+        robot.set_lift_height(0)
 
         while True:
             #get camera image
@@ -67,6 +68,7 @@ async def run(robot: cozmo.robot.Robot):
 
             #convert camera image to opencv format
             opencv_image = cv2.cvtColor(np.asarray(event.image), cv2.COLOR_RGB2GRAY)
+            h = opencv_image.shape[0]
             w = opencv_image.shape[1]
 
             #find the ball
@@ -76,12 +78,31 @@ async def run(robot: cozmo.robot.Robot):
             BallAnnotator.ball = ball
 
             if np.array_equal(ball, [0, 0, 0]):
-                looking_around = robot.start_behavior(cozmo.behavior.BehaviorTypes.LookAroundInPlace)
+                if not looking_around:
+                    robot.stop_all_motors()
+                    looking_around = robot.start_behavior(cozmo.behavior.BehaviorTypes.LookAroundInPlace)
             else:
                 # Stop moving around
                 if looking_around:
                     looking_around.stop()
                     looking_around = None
+
+                # If reached the ball (by checking the visible radius), lift it
+                if ball[2] > 95:
+                    robot.stop_all_motors()
+                    # Drive the final distance in a straight line (we'll lose sight of the ball when it's too close)
+                    await robot.drive_straight(cozmo.util.distance_mm(30),
+                                               cozmo.util.speed_mmps(10)).wait_for_completed()
+                    await robot.set_lift_height(1.0).wait_for_completed()
+                    return
+
+                # Move head to center the ball along the y axis
+                # Ball on the top -> head_speed = 0.5
+                # Ball on the bottom -> head_speed = -0.5
+                head_speed = 0.5 - ball[1] / h
+                print("Ball = {0}, Head speed = {1}".format(ball, head_speed))
+                robot.move_head(head_speed)
+
                 # Drive towards the ball like a Braitenberg vehicle.
                 # Larger radius -> slower
                 speed = 300 / ball[2]
@@ -93,8 +114,8 @@ async def run(robot: cozmo.robot.Robot):
                 left_speed = speed * (1 + diff)
                 right_speed = speed * (1 - diff)
 
-                print("Radius = {0}, Speed = {1}, Diff = {2}, Left = {3}, Right = {4}".format(
-                    ball[2], speed, diff, left_speed, right_speed))
+                print("Speed = {0}, Diff = {1}, Left = {2}, Right = {3}".format(
+                    speed, diff, left_speed, right_speed))
                 robot.drive_wheel_motors(left_speed, right_speed)
 
 
