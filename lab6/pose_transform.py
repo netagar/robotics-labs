@@ -26,7 +26,8 @@ def get_relative_pose(object_pose, reference_frame_pose):
 														   object_pose.position.y,
 														   object_pose.position.z,
 														   1]]).T).A1
-	return cozmo.util.pose_z_angle(new_position[0], new_position[1], new_position[2], object_pose.rotation.angle_z)
+	return cozmo.util.pose_z_angle(new_position[0], new_position[1], new_position[2],
+								   cozmo.util.radians(object_pose.rotation.angle_z.radians + z_radian))
 
 
 def find_relative_cube_pose(robot: cozmo.robot.Robot):
