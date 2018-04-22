@@ -8,6 +8,7 @@ Stater code for Lab 7.
 import cozmo
 from cozmo.util import degrees, Angle, Pose, distance_mm, speed_mmps
 import math
+
 import time
 
 # Add duration to drive_wheels to account for warming up.
@@ -126,7 +127,9 @@ def my_go_to_pose1(robot, x, y, angle_z):
     final_rotation = angle_z - initial_rotation
     distance = math.sqrt(x * x + y * y)
     my_turn_in_place(robot, initial_rotation, 30)
+    time.sleep(0.5)
     my_drive_straight(robot, distance, 30)
+    time.sleep(0.5)
     my_turn_in_place(robot, final_rotation, 30)
 
 def my_go_to_pose2(robot, x, y, angle_z):
@@ -170,11 +173,10 @@ def run(robot: cozmo.robot.Robot):
     #
     #rotate_front_wheel(robot, 360)
     # my_drive_straight(robot, 62, 50)
-    my_turn_in_place(robot, 45, 30)
-    robot.wait_for_all_actions_completed()
-    my_turn_in_place(robot, -45, 30)
+    # my_turn_in_place(robot, 45, 30)
+    # my_turn_in_place(robot, -45, 30)
     #
-    #my_go_to_pose1(robot, 100, 100, 0)
+    my_go_to_pose1(robot, 100, 100, 0)
     # my_go_to_pose2(robot, 100, 100, 45)
     # my_go_to_pose3(robot, 100, 100, 45)
 
