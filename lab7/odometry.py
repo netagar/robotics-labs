@@ -118,10 +118,7 @@ def my_go_to_pose1(robot, x, y, angle_z):
         angle_z -- Desired rotation of the robot around the vertical axis in degrees
     """
     # ####
-    # TODO: Implement a function that makes the robot move to a desired pose
-    # using the my_drive_straight and my_turn_in_place functions. This should
-    # include a sequence of turning in place, moving straight, and then turning
-    # again at the target to get to the desired rotation (Approach 1).
+    # Approach 1.
     # ####
     initial_rotation = math.degrees(math.atan2(y, x))
     final_rotation = angle_z - initial_rotation
@@ -140,11 +137,40 @@ def my_go_to_pose2(robot, x, y, angle_z):
         angle_z -- Desired rotation of the robot around the vertical axis in degrees
     """
     # ####
-    # TODO: Implement a function that makes the robot move to a desired pose
-    # using the robot.drive_wheels() function to jointly move and rotate the
-    # robot to reduce distance between current and desired pose (Approach 2).
+    # Formulae in Correl book chapter 3.5
     # ####
-    pass
+    p1 = 0.1
+    p2 = 0.1
+    p3 = 0.1
+
+    # Transform desired pose into world coordinates.
+    goal = cozmo.util.pose_z_angle(x + robot.pose.position.x, y + robot.pose.position.y, robot.pose.position.z,
+                                   cozmo.util.degrees(robot.pose.rotation.angle_z.degrees + angle_z))
+    while True:
+        print("Robot pose: {0}; Goal pose: {1}".format(robot.pose, goal))
+
+        delta_x = goal.position.x - robot.pose.position.x
+        delta_y = goal.position.y - robot.pose.position.y
+
+        distance = math.sqrt(pow(delta_x, 2) + pow(delta_y, 2))
+        bearing = robot.pose.rotation.angle_z.radians - math.atan2(delta_y, delta_x)
+        heading = goal.rotation.angle_z.radians - robot.pose.rotation.angle_z.radians
+        print("Distance = {0}; Bearing = {1}; Heading = {2}".format(distance, math.degrees(bearing), math.degrees(heading)))
+
+        if distance < 0.1 and heading < 0.01:
+            return
+        drive_speed = p1 * distance
+        rotation_speed = p2 * bearing + p3 * heading
+        print("Drive speed = {0}; Rotation speed = {1}".format(drive_speed, rotation_speed))
+
+        wheel_speed_adj = rotation_speed * get_distance_between_wheels() / 2
+        left_speed = drive_speed - wheel_speed_adj
+        right_speed = drive_speed + wheel_speed_adj
+        print("Left speed = {0}; Right speed = {1}".format(left_speed, right_speed))
+
+        robot.drive_wheels(left_speed, right_speed)
+        time.sleep(0.1)
+
 
 def my_go_to_pose3(robot, x, y, angle_z):
     """Moves the robot to a pose relative to its current pose.
@@ -176,8 +202,8 @@ def run(robot: cozmo.robot.Robot):
     # my_turn_in_place(robot, 45, 30)
     # my_turn_in_place(robot, -45, 30)
     #
-    my_go_to_pose1(robot, 100, 100, 0)
-    # my_go_to_pose2(robot, 100, 100, 45)
+    # my_go_to_pose1(robot, 100, 100, 0)
+    my_go_to_pose2(robot, 100, 100, 0)
     # my_go_to_pose3(robot, 100, 100, 45)
 
 
