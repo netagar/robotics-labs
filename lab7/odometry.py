@@ -142,9 +142,9 @@ def my_go_to_pose1(robot, x, y, angle_z):
 def normalize(radians):
     """Normalize an angle to +/- 180 degrees so the robot don't make stupid 270 degree turns."""
     while radians < -math.pi:
-        radians += 2*math.pi
+        radians += 2 * math.pi
     while radians > math.pi:
-        radians -= 2*math.pi
+        radians -= 2 * math.pi
     return radians
 
 
@@ -172,7 +172,8 @@ def my_go_to_pose2(robot, x, y, angle_z):
         distance = math.sqrt(pow(delta_x, 2) + pow(delta_y, 2))
         bearing = normalize(math.atan2(delta_y, delta_x) - robot.pose.rotation.angle_z.radians)
         heading = normalize(goal.rotation.angle_z.radians - robot.pose.rotation.angle_z.radians)
-        print("Distance = {0}; Bearing = {1}; Heading = {2}".format(distance, math.degrees(bearing), math.degrees(heading)))
+        print("Distance = {0}; Bearing = {1}; Heading = {2}".format(distance, math.degrees(bearing),
+                                                                    math.degrees(heading)))
 
         if distance < 8 and abs(heading) < 0.1:
             robot.stop_all_motors()
@@ -237,7 +238,7 @@ def run(robot: cozmo.robot.Robot):
 
     # cozmo_drive_straight(robot, 87, 10)
     # cozmo_turn_in_place(robot, 90, 30)
-    #cozmo_go_to_pose(robot, 0, 100, 0)
+    # cozmo_go_to_pose(robot, 0, 100, 0)
     #
     # rotate_front_wheel(robot, 360)
     # my_drive_straight(robot, 62, 50)
@@ -245,7 +246,7 @@ def run(robot: cozmo.robot.Robot):
     # my_turn_in_place(robot, -45, 30)
     #
     # my_go_to_pose1(robot, 100, 100, 0)
-    #my_go_to_pose2(robot, 100, 100, 0)
+    # my_go_to_pose2(robot, 100, 100, 0)
     my_go_to_pose3(robot, -100, -100, 0)
 
 
