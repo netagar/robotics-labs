@@ -214,12 +214,19 @@ def my_go_to_pose3(robot, x, y, angle_z):
         x,y -- Desired position of the robot in millimeters
         angle_z -- Desired rotation of the robot around the vertical axis in degrees
     """
-    # ####
-    # TODO: Implement a function that makes the robot move to a desired pose
-    # as fast as possible. You can experiment with the built-in Cozmo function
-    # (cozmo_go_to_pose() above) to understand its strategy and do the same.
-    # ####
-    pass
+    # Transform desired pose into world coordinates.
+    goal = cozmo.util.pose_z_angle(x + robot.pose.position.x, y + robot.pose.position.y, robot.pose.position.z,
+                                   cozmo.util.degrees(robot.pose.rotation.angle_z.degrees + angle_z))
+    delta_x = goal.position.x - robot.pose.position.x
+    delta_y = goal.position.y - robot.pose.position.y
+    bearing = normalize(math.atan2(delta_y, delta_x) - robot.pose.rotation.angle_z.radians)
+
+    if abs(bearing) > math.pi / 2:
+        # Goal behind robot. Use strategy 1
+        my_go_to_pose1(robot, x, y, angle_z)
+    else:
+        # Goal ahead of robot. Use strategy 2
+        my_go_to_pose2(robot, x, y, angle_z)
 
 
 def run(robot: cozmo.robot.Robot):
@@ -230,7 +237,7 @@ def run(robot: cozmo.robot.Robot):
 
     # cozmo_drive_straight(robot, 87, 10)
     # cozmo_turn_in_place(robot, 90, 30)
-    # cozmo_go_to_pose(robot, 100, 100, 0)
+    #cozmo_go_to_pose(robot, 0, 100, 0)
     #
     # rotate_front_wheel(robot, 360)
     # my_drive_straight(robot, 62, 50)
@@ -238,8 +245,8 @@ def run(robot: cozmo.robot.Robot):
     # my_turn_in_place(robot, -45, 30)
     #
     # my_go_to_pose1(robot, 100, 100, 0)
-    my_go_to_pose2(robot, 100, 100, 0)
-    # my_go_to_pose3(robot, 100, 100, 45)
+    #my_go_to_pose2(robot, 100, 100, 0)
+    my_go_to_pose3(robot, -100, -100, 0)
 
 
 if __name__ == '__main__':
