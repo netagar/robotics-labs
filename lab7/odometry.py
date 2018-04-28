@@ -238,7 +238,7 @@ def run(robot: cozmo.robot.Robot):
 
     # cozmo_drive_straight(robot, 87, 10)
     # cozmo_turn_in_place(robot, 90, 30)
-    # cozmo_go_to_pose(robot, 0, 100, 0)
+    #cozmo_go_to_pose(robot, 100, 100, -90)
     #
     # rotate_front_wheel(robot, 360)
     # my_drive_straight(robot, 62, 50)
@@ -247,7 +247,7 @@ def run(robot: cozmo.robot.Robot):
     #
     # my_go_to_pose1(robot, 100, 100, 0)
     # my_go_to_pose2(robot, 100, 100, 0)
-    my_go_to_pose3(robot, -100, -100, 0)
+    my_go_to_pose3(robot, 100, 100, -90)
 
 
 if __name__ == '__main__':
