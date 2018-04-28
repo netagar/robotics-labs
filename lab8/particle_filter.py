@@ -18,6 +18,7 @@ def motion_update(particles, odom):
     motion_particles = []
     for particle in particles:
         (dx, dy, dh) = add_odometry_noise(odom, ODOM_HEAD_SIGMA, ODOM_TRANS_SIGMA)
+        (dx, dy) = rotate_point(dx, dy, particle.h)
         motion_particles.append(Particle(particle.x + dx, particle.y + dy, particle.h + dh))
     return motion_particles
 
@@ -61,8 +62,8 @@ def measurement_update(particles, measured_marker_list, grid):
         Returns: the list of particles represents belief p(x_{t} | u_{t})
                 after measurement update
     """
-    # Resample 90% of the particles, and add 10% as a random distribution
-    resample = int(len(particles) * 0.9)
+    # Resample 95% of the particles, and add 5% as a random distribution
+    resample = int(len(particles) * 0.95)
     new_sample = len(particles) - resample
 
     cum_weights = []
