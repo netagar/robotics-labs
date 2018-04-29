@@ -33,7 +33,7 @@ def move_relative_to_cube(robot: cozmo.robot.Robot):
         except asyncio.TimeoutError:
             print("Didn't find a cube")
 
-    desired_pose_relative_to_cube = Pose(0, 100, 0, angle_z=degrees(-90))
+    desired_pose_relative_to_cube = Pose(0, 300, 0, angle_z=degrees(-90))
 
     cube_pose_relative_to_robot = get_relative_pose(cube.pose, robot.pose)
     desired_pose_relative_to_robot = cube_pose_relative_to_robot.define_pose_relative_this(

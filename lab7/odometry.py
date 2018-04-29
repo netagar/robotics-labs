@@ -175,7 +175,7 @@ def my_go_to_pose2(robot, x, y, angle_z):
         print("Distance = {0}; Bearing = {1}; Heading = {2}".format(distance, math.degrees(bearing),
                                                                     math.degrees(heading)))
 
-        if distance < 8 and abs(heading) < 0.1:
+        if distance < 10 and abs(heading) < 0.1:
             robot.stop_all_motors()
             return
 
