@@ -10,7 +10,6 @@ import math
 import cozmo
 
 
-
 def astar(grid, heuristic):
     """Perform the A* search algorithm on a defined grid
 
@@ -18,8 +17,28 @@ def astar(grid, heuristic):
         grid -- CozGrid instance to perform search on
         heuristic -- supplied heuristic function
     """
-        
-    pass # Your code here
+    goal = grid.getGoals()[0]
+    frontier = PriorityQueue()
+
+    def makeState(path, current_cost):
+        """Creates a state object to put into the priority queue.
+
+        A state is the tuple of (estimated total cost, current cost, path).
+        """
+        remaining_cost = heuristic(path[-1], goal)
+        return current_cost + remaining_cost, current_cost, path
+
+    frontier.put(makeState([grid.getStart()], 0))
+    while not frontier.empty():
+        (_, current_cost, path) = frontier.get()
+        grid.addVisited(path[-1])
+        if path[-1] == goal:
+            grid.setPath(path)
+            return
+        neighbors = grid.getNeighbors(path[-1])
+        for (neighbor, weight) in neighbors:
+            new_path = path + [neighbor]
+            frontier.put(makeState(new_path, current_cost + weight))
 
 
 def heuristic(current, goal):
@@ -29,8 +48,14 @@ def heuristic(current, goal):
         current -- current cell
         goal -- desired goal cell
     """
-        
-    return 1 # Your code here
+
+    # Go diagonally as much as possible, then the rest straight.
+    (x1, y1) = current
+    (x2, y2) = goal
+    a = abs(x1-x2)
+    b = abs(y1-y2)
+
+    return math.sqrt(2) * min(a, b) + max(a, b) - min(a, b)
 
 
 def cozmoBehavior(robot: cozmo.robot.Robot):
