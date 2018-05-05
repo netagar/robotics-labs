@@ -1,6 +1,5 @@
-
-#author1:
-#author2:
+# author1:
+# author2:
 
 from grid import *
 from visualizer import *
@@ -8,6 +7,10 @@ import threading
 from queue import PriorityQueue
 import math
 import cozmo
+import time
+
+sys.path.insert(0, '../lab6')
+from pose_transform import get_relative_pose
 
 
 def astar(grid, heuristic):
@@ -71,8 +74,8 @@ def heuristic(current, goal):
     # Go diagonally as much as possible, then the rest straight.
     (x1, y1) = current
     (x2, y2) = goal
-    a = abs(x1-x2)
-    b = abs(y1-y2)
+    a = abs(x1 - x2)
+    b = abs(y1 - y2)
 
     return math.sqrt(2) * min(a, b) + max(a, b) - min(a, b)
 
@@ -88,11 +91,39 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
         Arguments:
         robot -- cozmo.robot.Robot instance, supplied by cozmo.run_program
     """
-        
+
     global grid, stopevent
-    
+
+    origin = robot.pose
+    start = grid.getStart()
+    goal_relative_to_cube = cozmo.util.Pose(-100, 0, 0, angle_z=cozmo.util.degrees(0))
+
+    def pose_to_coords(pose):
+        """Transforms a cozmo pose in world coordinates to the grid coordinates.
+
+        Assuming that the robot starts at the given start location on the map and facing +x direction."""
+        pose_relative_to_origin = get_relative_pose(pose, origin)
+        (x0, y0) = start
+        return round(pose_relative_to_origin.position.x / grid.scale) + x0, round(
+            pose_relative_to_origin.position.y / grid.scale) + y0
+
+    last_know_poses = [None, None, None]
     while not stopevent.is_set():
-        pass # Your code here
+        cubes = [robot.world.get_light_cube(id) for id in cozmo.objects.LightCubeIDs]
+        for i, cube in enumerate(cubes):
+            if cube.is_visible:
+                last_know_poses[i] = cube.pose
+
+        # Update obstacles and goals on the map
+        grid.clearObstacles()
+        grid.clearGoals()
+        for pose in last_know_poses:
+            if pose:
+                grid.addObstacle(pose_to_coords(pose))
+        if last_know_poses[0]:
+            grid.addGoal(pose_to_coords(last_know_poses[0].define_pose_relative_this(goal_relative_to_cube)))
+
+        time.sleep(0.1)
 
 
 ######################## DO NOT MODIFY CODE BELOW THIS LINE ####################################
@@ -101,7 +132,7 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
 class RobotThread(threading.Thread):
     """Thread to run cozmo code separate from main thread
     """
-        
+
     def __init__(self):
         threading.Thread.__init__(self, daemon=True)
 
@@ -121,4 +152,3 @@ if __name__ == "__main__":
     robot.start()
     visualizer.start()
     stopevent.set()
-
