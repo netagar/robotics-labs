@@ -48,6 +48,8 @@ def astar(grid, heuristic):
         return best_state
 
     pushState([grid.getStart()], 0)
+    grid.clearVisited()
+    grid.clearPath()
     while True:
         state = findNext()
         if state is None:
@@ -122,6 +124,9 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
                 grid.addObstacle(pose_to_coords(pose))
         if last_know_poses[0]:
             grid.addGoal(pose_to_coords(last_know_poses[0].define_pose_relative_this(goal_relative_to_cube)))
+
+        # Replan
+        astar(grid, heuristic)
 
         time.sleep(0.1)
 
