@@ -99,6 +99,7 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
     origin = robot.pose
     start = grid.getStart()
     goal_relative_to_cube = cozmo.util.Pose(-100, 0, 0, angle_z=cozmo.util.degrees(0))
+    center_of_arena = (grid.width / 2, grid.height / 2)
 
     def pose_to_coords(pose):
         """Transforms a cozmo pose in world coordinates to the grid coordinates.
@@ -110,7 +111,10 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
             pose_relative_to_origin.position.y / grid.scale) + y0
 
     last_know_poses = [None, None, None]
+    turn_in_place = None
     while not stopevent.is_set():
+        robot_coords = pose_to_coords(robot.pose)
+
         cubes = [robot.world.get_light_cube(id) for id in cozmo.objects.LightCubeIDs]
         for i, cube in enumerate(cubes):
             if cube.is_visible:
@@ -119,14 +123,42 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
         # Update obstacles and goals on the map
         grid.clearObstacles()
         grid.clearGoals()
+        grid.setStart(robot_coords)
         for pose in last_know_poses:
             if pose:
                 grid.addObstacle(pose_to_coords(pose))
         if last_know_poses[0]:
+            # Cube 1 is visible
             grid.addGoal(pose_to_coords(last_know_poses[0].define_pose_relative_this(goal_relative_to_cube)))
+        elif robot_coords != center_of_arena:
+            # Drive to the center of the arena.
+            grid.addGoal(center_of_arena)
+        elif turn_in_place is None:
+            # Turn in place
+            turn_in_place = robot.turn_in_place(cozmo.util.degrees(360), in_parallel=True, speed=cozmo.util.degrees(36))
+
+        if len(grid.getGoals()) == 0:
+            continue
+
+        # Now that we have a goal, stop turning in place.
+        if turn_in_place is not None:
+            turn_in_place.abort()
+            turn_in_place = None
 
         # Replan
         astar(grid, heuristic)
+        path = grid.getPath()
+
+        # Move one step further
+        if len(path) > 1:
+            [(x0, y0), (x1, y1)] = path[0:2]
+            dx, dy = x1 - x0, y1 - y0
+            dist = math.sqrt(dx ** 2 + dy ** 2) * grid.scale
+            angle = math.atan2(dy, dx)
+
+            robot.turn_in_place(cozmo.util.radians(angle) - origin.rotation.angle_z,
+                                is_absolute=True).wait_for_completed()
+            robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(30)).wait_for_completed()
 
         time.sleep(0.1)
 
