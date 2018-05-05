@@ -18,7 +18,9 @@ def astar(grid, heuristic):
         heuristic -- supplied heuristic function
     """
     goal = grid.getGoals()[0]
-    frontier = PriorityQueue()
+
+    # map from current location -> (estimated total cost, current cost, best path)
+    best = {}
 
     def makeState(path, current_cost):
         """Creates a state object to put into the priority queue.
@@ -28,9 +30,26 @@ def astar(grid, heuristic):
         remaining_cost = heuristic(path[-1], goal)
         return current_cost + remaining_cost, current_cost, path
 
-    frontier.put(makeState([grid.getStart()], 0))
-    while not frontier.empty():
-        (_, current_cost, path) = frontier.get()
+    def pushState(path, current_cost):
+        """Pushes the state to the best mapping if it's better than the current state."""
+        if path[-1] not in best or best[path[-1]][1] > current_cost:
+            best[path[-1]] = makeState(path, current_cost)
+
+    def findNext():
+        """Finds the next unvisited location with the lowest estimated total cost."""
+        visited = grid.getVisited()
+        best_state = None
+        for loc, state in best.items():
+            if loc not in visited and (best_state is None or state < best_state):
+                best_state = state
+        return best_state
+
+    pushState([grid.getStart()], 0)
+    while True:
+        state = findNext()
+        if state is None:
+            break
+        (_, current_cost, path) = state
         grid.addVisited(path[-1])
         if path[-1] == goal:
             grid.setPath(path)
@@ -38,7 +57,7 @@ def astar(grid, heuristic):
         neighbors = grid.getNeighbors(path[-1])
         for (neighbor, weight) in neighbors:
             new_path = path + [neighbor]
-            frontier.put(makeState(new_path, current_cost + weight))
+            pushState(new_path, current_cost + weight)
 
 
 def heuristic(current, goal):
