@@ -112,8 +112,10 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
 
     last_know_poses = [None, None, None]
     turn_in_place = None
+    goal_pose = None
     while not stopevent.is_set():
         robot_coords = pose_to_coords(robot.pose)
+        print("Robot pose: {0}, coords: {1}".format(robot.pose.position, robot_coords))
 
         cubes = [robot.world.get_light_cube(id) for id in cozmo.objects.LightCubeIDs]
         for i, cube in enumerate(cubes):
@@ -129,7 +131,8 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
                 grid.addObstacle(pose_to_coords(pose))
         if last_know_poses[0]:
             # Cube 1 is visible
-            grid.addGoal(pose_to_coords(last_know_poses[0].define_pose_relative_this(goal_relative_to_cube)))
+            goal_pose = last_know_poses[0].define_pose_relative_this(goal_relative_to_cube)
+            grid.addGoal(pose_to_coords(goal_pose))
         elif robot_coords != center_of_arena:
             # Drive to the center of the arena.
             grid.addGoal(center_of_arena)
@@ -145,6 +148,13 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
             turn_in_place.abort()
             turn_in_place = None
 
+        # If we are already at goal, turn to face the correct angle and stop.
+        if robot_coords == grid.getGoals()[0]:
+            if goal_pose:
+                robot.turn_in_place(goal_pose.rotation.angle_z + origin.rotation.angle_z,
+                                    is_absolute=True).wait_for_completed()
+            return
+
         # Replan
         astar(grid, heuristic)
         path = grid.getPath()
@@ -156,9 +166,9 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
             dist = math.sqrt(dx ** 2 + dy ** 2) * grid.scale
             angle = math.atan2(dy, dx)
 
-            robot.turn_in_place(cozmo.util.radians(angle) - origin.rotation.angle_z,
+            robot.turn_in_place(cozmo.util.radians(angle) + origin.rotation.angle_z,
                                 is_absolute=True).wait_for_completed()
-            robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(30)).wait_for_completed()
+            robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(20)).wait_for_completed()
 
         time.sleep(0.1)
 
