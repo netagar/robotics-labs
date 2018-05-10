@@ -8,6 +8,7 @@ from queue import PriorityQueue
 import math
 import cozmo
 import time
+from collections import deque
 
 sys.path.insert(0, '../lab6')
 from pose_transform import get_relative_pose
@@ -96,10 +97,13 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
 
     global grid, stopevent
 
+    # Useful vars for the local functions.
     origin = robot.pose
     start = grid.getStart()
     goal_relative_to_cube = cozmo.util.Pose(-100, 0, 0, angle_z=cozmo.util.degrees(0))
     center_of_arena = (grid.width / 2, grid.height / 2)
+    motion = None  # Current motion of the robot, if the robot is moving.
+    goal_pose = None
 
     def pose_to_coords(pose):
         """Transforms a cozmo pose in world coordinates to the grid coordinates.
@@ -110,65 +114,95 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
         return round(pose_relative_to_origin.position.x / grid.scale) + x0, round(
             pose_relative_to_origin.position.y / grid.scale) + y0
 
-    last_know_poses = [None, None, None]
-    turn_in_place = None
-    goal_pose = None
+    def coords_to_pose(coords, angle):
+        (x, y) = coords
+        (x0, y0) = start
+        return origin.define_pose_relative_this(
+            cozmo.util.pose_z_angle((x - x0) * grid.scale, (y - y0) * grid.scale, 0, angle))
+
+    def stop_motion():
+        global motion
+        if motion is not None:
+            motion.abort()
+            motion = None
+
+    def direction(p1, p2):
+        """Returns the direction vector from p1 to p2."""
+        return p2[0] - p1[0], p2[1] - p1[1]
+
+    def build_plan(path):
+        """Given a path (list of coords), build a plan that goes through each key point on the path.
+
+        Returns a list of poses."""
+        plan = deque()
+        last_point = None
+        last_direction = None
+        for coords in path:
+            # The first point is the starting location. Don't need to add movement.
+            if last_point is None:
+                last_point = coords
+                continue
+
+            dir = direction(last_point, coords)
+            if dir != last_direction:
+                # Move to last point, facing current direction
+                plan.append(coords_to_pose(last_point, cozmo.util.radians(math.atan2(dir[1], dir[0]))))
+                last_direction = dir
+            # Otherwise, we're continuing to the same direction
+
+        plan.append(goal_pose)
+        return plan
+
+    last_known_coords = [None, None, None]  # Last known coordinates for the 3 cubes.
+    plan = None  # A list of poses to go through in order to reach the goal.
     while not stopevent.is_set():
         robot_coords = pose_to_coords(robot.pose)
         print("Robot pose: {0}, coords: {1}".format(robot.pose.position, robot_coords))
 
         cubes = [robot.world.get_light_cube(id) for id in cozmo.objects.LightCubeIDs]
+        update_map = False  # Only update map in case cubes are moved.
         for i, cube in enumerate(cubes):
             if cube.is_visible:
-                last_know_poses[i] = cube.pose
+                coords = pose_to_coords(cube.pose)
+                if coords != last_known_coords[i]:
+                    last_known_coords[i] = coords
+                    update_map = True
+                if i == 0:
+                    goal_pose = cube.pose.define_pose_relative_this(goal_relative_to_cube)
 
-        # Update obstacles and goals on the map
-        grid.clearObstacles()
-        grid.clearGoals()
-        grid.setStart(robot_coords)
-        for pose in last_know_poses:
-            if pose:
-                grid.addObstacle(pose_to_coords(pose))
-        if last_know_poses[0]:
-            # Cube 1 is visible
-            goal_pose = last_know_poses[0].define_pose_relative_this(goal_relative_to_cube)
-            grid.addGoal(pose_to_coords(goal_pose))
-        elif robot_coords != center_of_arena:
-            # Drive to the center of the arena.
-            grid.addGoal(center_of_arena)
-        elif turn_in_place is None:
-            # Turn in place
-            turn_in_place = robot.turn_in_place(cozmo.util.degrees(360), in_parallel=True, speed=cozmo.util.degrees(36))
+        if update_map:
+            stop_motion()
+            grid.clearObstacles()
+            grid.clearGoals()
+            grid.setStart(robot_coords)
+            for coords in last_known_coords:
+                if coords:
+                    # Mark each cube as a 3x3 square to account for the radius of the robot.
+                    grid.addObstacle(coords)
+                    for neighbor, _ in grid.getNeighbors(coords):
+                        grid.addObstacle(neighbor)
 
-        if len(grid.getGoals()) == 0:
-            continue
-
-        # Now that we have a goal, stop turning in place.
-        if turn_in_place is not None:
-            turn_in_place.abort()
-            turn_in_place = None
-
-        # If we are already at goal, turn to face the correct angle and stop.
-        if robot_coords == grid.getGoals()[0]:
             if goal_pose:
-                robot.turn_in_place(goal_pose.rotation.angle_z + origin.rotation.angle_z,
-                                    is_absolute=True).wait_for_completed()
+                grid.addGoal(pose_to_coords(goal_pose))
+            elif robot_coords != center_of_arena:
+                # Drive to the center of the arena.
+                grid.addGoal(center_of_arena)
+            else:
+                # Turn in place, 30 degrees at a time, and re-evaluate.
+                robot.turn_in_place(cozmo.util.degrees(30)).wait_for_completed()
+                continue
+
+            # Now that we have a goal, replan the path.
+            astar(grid, heuristic)
+            plan = build_plan(grid.getPath())
+
+        # Follow the plan.
+        if len(plan) == 0:
             return
 
-        # Replan
-        astar(grid, heuristic)
-        path = grid.getPath()
-
-        # Move one step further
-        if len(path) > 1:
-            [(x0, y0), (x1, y1)] = path[0:2]
-            dx, dy = x1 - x0, y1 - y0
-            dist = math.sqrt(dx ** 2 + dy ** 2) * grid.scale
-            angle = math.atan2(dy, dx)
-
-            robot.turn_in_place(cozmo.util.radians(angle) + origin.rotation.angle_z,
-                                is_absolute=True).wait_for_completed()
-            robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(20)).wait_for_completed()
+        if motion is None or motion.is_completed:
+            nextpose = plan.popleft()
+            motion = robot.go_to_pose(nextpose)
 
         time.sleep(0.1)
 
