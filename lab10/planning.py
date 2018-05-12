@@ -95,7 +95,10 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
         robot -- cozmo.robot.Robot instance, supplied by cozmo.run_program
     """
 
-    global grid, stopevent
+    global grid, stopevent, motion
+
+    robot.set_lift_height(0).wait_for_completed()
+    robot.set_head_angle(cozmo.util.degrees(0)).wait_for_completed()
 
     # Useful vars for the local functions.
     origin = robot.pose
@@ -122,9 +125,9 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
 
     def stop_motion():
         global motion
-        if motion is not None:
+        if motion is not None and motion.is_running:
             motion.abort()
-            motion = None
+        motion = None
 
     def direction(p1, p2):
         """Returns the direction vector from p1 to p2."""
@@ -149,15 +152,19 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
                 plan.append(coords_to_pose(last_point, cozmo.util.radians(math.atan2(dir[1], dir[0]))))
                 last_direction = dir
             # Otherwise, we're continuing to the same direction
+            last_point = coords
 
-        plan.append(goal_pose)
+        if goal_pose is not None:
+            plan.append(goal_pose)
+        else:
+            plan.append(coords_to_pose(last_point, cozmo.util.radians(0)))
+
         return plan
 
     last_known_coords = [None, None, None]  # Last known coordinates for the 3 cubes.
     plan = None  # A list of poses to go through in order to reach the goal.
     while not stopevent.is_set():
         robot_coords = pose_to_coords(robot.pose)
-        print("Robot pose: {0}, coords: {1}".format(robot.pose.position, robot_coords))
 
         cubes = [robot.world.get_light_cube(id) for id in cozmo.objects.LightCubeIDs]
         update_map = False  # Only update map in case cubes are moved.
@@ -170,7 +177,9 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
                 if i == 0:
                     goal_pose = cube.pose.define_pose_relative_this(goal_relative_to_cube)
 
-        if update_map:
+        if update_map or plan is None:
+            print("Cubes moved, updating map. Cube locations: " + str(last_known_coords))
+
             stop_motion()
             grid.clearObstacles()
             grid.clearGoals()
@@ -196,12 +205,18 @@ def cozmoBehavior(robot: cozmo.robot.Robot):
             astar(grid, heuristic)
             plan = build_plan(grid.getPath())
 
+            print("Plan: " + str(plan))
+
         # Follow the plan.
         if len(plan) == 0:
+            if motion is not None:
+                motion.wait_for_completed()
+            stopevent.set()
             return
 
         if motion is None or motion.is_completed:
             nextpose = plan.popleft()
+            print("Following plan to next pose: " + str(nextpose))
             motion = robot.go_to_pose(nextpose)
 
         time.sleep(0.1)
